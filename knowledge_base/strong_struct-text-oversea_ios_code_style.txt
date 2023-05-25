@@ -1,0 +1,159 @@
+海外 iOS 代码规范
+
+版本
+V0.1 2021-12-10
+V0.2 2022-3-30 追加对日志 API 使用的规范(3.4)
+V0.3 2022-4-27 追加安全性规则 2.8
+V0.4 2022-6-28 修正 OC 分类的规范
+V0.5 2022-8-26 增加安全性规则 2.9，2.10；更新强制规范对应的 Linter 规则名
+
+规范类别
+● 强制型
+○ 流水线合入前必须要符合的规范, OC 依靠 OClint 保证，Swift 依靠 Swiftlint 保证（待部
+署）
+● 推荐型
+○ 推荐应用的规范，目前不做强制要求
+我们会根据线上质量的变化，适时调整规范类别
+
+OC
+风格
+以 OC 代码风格规范为基础
+
+1.1 方法 Nullability 标识
+类别：强制
+Linter 规则：-Wnullability-completeness
+
+为了能适应 Swift 的 Optional，必须对每个属性、方法中的参数和返回值写明 nullability 的标识，建
+议头文件的声明部分用 NS_ASSUME_NONNULL_BEGIN 和 NS_ASSUME_NONNULL_END 包围，
+这样只需要用 nullable 标识可以缺省为 nil 的属性。
+推荐使用 nullable 当修饰符
+
+@property (nonatomic, copy, nullable) NSString *termsOfService;
+
+当双指针类型和有返回值的 Block 作为参数时，我们不得不使用下划线版本的修饰符
+
+- (void)compute:(nullable NSError ** _Nullable)error;
+// 第一个标识 handler block 可以是 nil，第二个标识 block 的返回值可以是 nil，第三个标识
+block 的参数可以是 nil
+- (void)convertObject:(nullable id __nullable (^)(id __nullable))handler;
+
+1.2 海外前缀标识
+类别：强制
+Linter 规则：OverseaCategoryNamingStyle
+Pod 组件名、类、接口、全局常量以 KSO 开头；对系统和基类分类名以 KSO 开头，分类中的
+方法名以 kso_开头
+
+1.3 GCD 队列命名
+类别：强制
+Linter 规则：OverseaGcdQueueNamingStyle
+命名遵循 com.kiwa.{组件名}.{具体用途}，不允许创建匿名 GCD 队列
+
+1.4 头文件引用规范
+同 Pod 头文件，使用#import "XXX.h" 方式引用；其它 Pod 头文件，使用#import
+<PodName/PodHeader.h>引用
+
+1.5 类实现应该短小精悍
+类别：推荐
+过长的类（超过 1000 行）一般都承担了过多的责任，违反 SRP（单一责任）原则，而且降低可读
+性，推荐按权责进行分拆。
+
+1.6 方法实现应该短小精悍
+类别：推荐
+过长的方法（超过 200 行）往往将不同抽象层次的逻辑混杂在一起，降低可读性；推荐按照抽象级
+别做分拆
+
+安全性
+2.1 数组元素增删改查必须使用安全方法
+类别：强制
+Linter 规则：OverseaObjCVerifyCollectionsSafeRuleRule
+为了防止插入 nil 元素以及删除越界导致崩溃，强制使用 KSCommon 中
+NSMutableArray+safe.h 和 NSArray+safe.h 的 safe_族方法
+
+2.2 字典元素增删改查必须使用安全方法
+类别：强制
+Linter 规则：OverseaObjCVerifyCollectionsSafeRuleRule
+为了防止插入 nil 键值导致崩溃，强制使用 KSCommon 中 NSMutableDictionary+safe.h 和
+NSDictionary+safe.h 的 safe_族方法
+
+2.3 禁止在 GCD 主队列执行同步任务
+类别：强制 (已存在）
+Linter 规则：ObjCVerifyGCDDeadLockRule
+将由主站 OClint 中的 VerifyGCDLock 规则强制
+
+2.4 方法传入参数和返回值需符合 Nullability 标注
+类别：强制
+Linter 规则：-Wnonnull
+若方法的参数和返回值有 Nullability 标注时，传入的参数和传出的参数需符合标注规则，以免方法
+体内出现对 nil 操作的隐患
+
+2.5 协议声明严格标记可选方法(optional)，未标记的都是必选实现方法；遵守协议的类
+严格提供所有必选方法实现
+类别：强制
+
+Linter 规则：-Wprotocol
+
+2.6 调用协议可选的方法要做可响应性判断(respondsToSelector)
+类别：强制
+Linter 规则：MissingResponseCheckBeforeProtocolMethodCalling
+
+2.7 禁止在 Category 重写原类的方法
+类别：强制
+Linter 规则：ForbidCategoryOverrideOriginMethod
+
+2.8 OC 对象类型的属性禁止使用 assign 关键字
+类别：强制
+Linter 规则：-Wobjc-property-assign-on-object-type
+
+2.9 增量代码不允许出现海外 iOS 代码缺陷定级级别 1，2 的缺陷
+2.10 存量代码不允许出现海外 iOS 代码缺陷定级级别 1 的缺陷
+
+一致性
+3.1 获取颜色值须通过 Design Token 接口
+类别：强制 (已存在）
+Linter 规则：ProTrinityColorRules
+需使用 TrinityCommonResColorIOS 中定义的颜色
+例外：直播 FT 因业务需求可使用自定义颜色
+
+3.2 获取字体须通过 Design Token 接口
+类别：强制
+需使用 TrinityCommonResFontIOS 中定义的字体
+
+3.3 获取阴影、圆角、蒙版样式须通过 Design Token 接口
+类别：强制
+需使用 TrinityCommonResLayerIOS 中定义的样式
+
+3.4 日志打印使用 KSTLog 系接口
+类别：强制
+Linter 规则：ProTrinityColorRules
+不允许使用 DDLog 系接口
+
+Swift
+风格
+以 Google Swift 风格指引为基础
+规则项尚待完善
+
+架构
+关于当前海外架构的描述，参见附录 4；关于当前 POD 模块的层次划分参见代码仓库中 Podfile 和
+GlobalConfig 中 framework_level 配置文件。
+
+4.1 业务 FT 模块之间通过接口调用
+类别：推荐
+制定此规则是为了尽可能保证相关 FT 模块的懒加载和独立编译打包
+
+4.2 业务支撑层代码不允许依赖业务层
+类别：强制
+
+4.3 平台层代码不允许依赖业务和业务支撑层代码
+类别：强制
+
+4.4 同层 Pod 间应避免循环依赖
+类别：推荐
+
+附录
+
+1.当前生效的 OCLint
+2.海外 iOS 代码缺陷定级
+3.SwiftLint
+4.海外 iOS 组件化项目立项书
+
+
